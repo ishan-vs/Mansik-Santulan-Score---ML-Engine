@@ -1,236 +1,722 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Mental Health Signal — Student Wellness Analytics</title>
+<meta name="color-scheme" content="dark light" />
+<meta name="theme-color" content="#0B0F0D" />
+<title>Mansik Santulan — Wellness Score</title>
+<meta name="description" content="Mansik Santulan Score: an ML-based wellness estimate with mood tracking, insights and self-care exercises. Not a diagnosis." />
+
+<!-- Apply saved theme before first paint (dark is the default) -->
+<script>
+  (function () {
+    var t = "dark";
+    try { if (localStorage.getItem("msb.theme") === "light") t = "light"; } catch (e) {}
+    document.documentElement.setAttribute("data-theme", t);
+  })();
+</script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css" />
-</head>S
+
+<!-- Deferred scripts run in order. Chart.js and jsPDF are optional: the app degrades gracefully if they fail to load. -->
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script defer src="script.js"></script>
+</head>
 <body>
 
-<div class="noise-overlay" aria-hidden="true"></div>
+<!-- Inline SVG icon sprite -->
+<svg class="sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-logo" viewBox="0 0 24 24"><path d="M12 21s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.6-7 10-7 10Z"/><path d="M8 12h2l1.5-2.5L13 14l1-2h2"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-layout" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></symbol>
+  <symbol id="i-clipboard" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></symbol>
+  <symbol id="i-smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></symbol>
+  <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10Z"/><path d="M2 21c0-3 1.9-5.6 5-7"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v3h16v-3"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="m6 4 14 8-14 8Z"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></symbol>
+  <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></symbol>
+  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.4-.5-2-1-3-1.1-2.2-.2-4.1 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.2.4-2.4 1-3a2.5 2.5 0 0 0 2.5 2.5Z"/></symbol>
+  <symbol id="i-award" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.5 13 17 22l-5-3-5 3 1.5-9"/></symbol>
+  <symbol id="i-wind" viewBox="0 0 24 24"><path d="M17.7 7.7A2.5 2.5 0 1 1 19 12H2M9.6 4.6A2 2 0 1 1 11 8H2M12.6 19.4A2 2 0 1 0 14 16H2"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+  <symbol id="i-chev-l" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="i-chev-r" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-timer" viewBox="0 0 24 24"><path d="M10 2h4M12 14l3-3"/><circle cx="12" cy="14" r="8"/></symbol>
+  <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="m12 3 1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9Z"/><path d="M19 3v4M21 5h-4"/></symbol>
+</svg>
 
-<header class="site-header">
-  <div class="header-inner">
-    <span class="eyebrow">Student Wellness Analytics</span>
-    <h1 class="title">Mental Health <em>Signal</em></h1>
-    <p class="subtitle">A quick read on how habits, screen time, and stress are trending — modeled from your daily rhythm, not a diagnosis.</p>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<!-- ============================== NAVBAR ============================== -->
+<header class="nav" id="nav">
+  <div class="nav-inner">
+    <a class="brand" href="#dashboard" aria-label="Mansik Santulan — go to dashboard">
+      <span class="brand-mark"><svg class="i"><use href="#i-logo"/></svg></span>
+      <span class="brand-name">Mansik Santulan</span>
+    </a>
+
+    <nav class="nav-menu" id="nav-menu" aria-label="Primary">
+      <ul class="nav-links" id="nav-links">
+        <li><a href="#dashboard" data-section="dashboard">Dashboard</a></li>
+        <li><a href="#assessment" data-section="assessment">ML Assessment</a></li>
+        <li><a href="#insights" data-section="insights">Insights</a></li>
+        <li><a href="#mood" data-section="mood">Mood Tracker</a></li>
+        <li><a href="#wellness" data-section="wellness">Wellness Zone</a></li>
+        <li><a href="#about" data-section="about">About</a></li>
+      </ul>
+      <span class="nav-indicator" id="nav-indicator" aria-hidden="true"></span>
+    </nav>
+
+    <div class="nav-actions">
+      <button class="btn-icon" id="theme-toggle" type="button" aria-label="Switch to light theme" title="Toggle theme">
+        <svg class="i icon-sun"><use href="#i-sun"/></svg>
+        <svg class="i icon-moon"><use href="#i-moon"/></svg>
+      </button>
+      <button class="btn-icon" type="button" data-action="open-settings" aria-label="Settings and privacy" title="Settings &amp; privacy">
+        <svg class="i"><use href="#i-sliders"/></svg>
+      </button>
+      <button class="btn-icon nav-burger" id="nav-burger" type="button" aria-expanded="false" aria-controls="nav-menu" aria-label="Open menu">
+        <svg class="i icon-open"><use href="#i-menu"/></svg>
+        <svg class="i icon-close"><use href="#i-x"/></svg>
+      </button>
+    </div>
   </div>
 </header>
 
-<main class="layout">
+<main id="main">
 
-  <!-- FORM PANEL -->
-  <section class="panel form-panel" aria-labelledby="form-heading">
-    <form id="predict-form" novalidate>
-
-      <fieldset class="group">
-        <legend><span class="legend-index">01</span> Profile</legend>
-        <div class="grid grid-3">
-          <div class="field">
-            <label for="age">Age</label>
-            <input type="number" id="age" name="age" min="10" max="100" step="1" required placeholder="e.g. 21" />
-            <span class="hint">10–100</span>
-            <span class="error-msg" data-for="age"></span>
-          </div>
-          <div class="field">
-            <label for="gender">Gender</label>
-            <select id="gender" name="gender" required>
-              <option value="" disabled selected hidden>Select</option>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-            </select>
-            <span class="error-msg" data-for="gender"></span>
-          </div>
-          <div class="field">
-            <label for="country">Country</label>
-            <input type="text" id="country" name="country" list="country-list" required placeholder="e.g. India" autocomplete="off" />
-            <datalist id="country-list">
-              <option value="India"></option>
-              <option value="USA"></option>
-              <option value="Canada"></option>
-              <option value="Australia"></option>
-              <option value="UK"></option>
-              <option value="Germany"></option>
-              <option value="Mexico"></option>
-              <option value="Turkey"></option>
-              <option value="France"></option>
-            </datalist>
-            <span class="hint">Not listed? Type it anyway.</span>
-            <span class="error-msg" data-for="country"></span>
-          </div>
-        </div>
-      </fieldset>
-
-      <fieldset class="group">
-        <legend><span class="legend-index">02</span> Academic &amp; Digital Habits</legend>
-        <div class="grid grid-2">
-          <div class="field">
-            <label for="academic_level">Academic level</label>
-            <select id="academic_level" name="academic_level" required>
-              <option value="" disabled selected hidden>Select</option>
-              <option value="High School">High School</option>
-              <option value="Undergraduate">Undergraduate</option>
-              <option value="Graduate">Graduate</option>
-            </select>
-            <span class="error-msg" data-for="academic_level"></span>
-          </div>
-          <div class="field">
-            <label for="most_used_platform">Most-used platform</label>
-            <select id="most_used_platform" name="most_used_platform" required>
-              <option value="" disabled selected hidden>Select</option>
-              <option value="Facebook">Facebook</option>
-              <option value="Instagram">Instagram</option>
-              <option value="Snapchat">Snapchat</option>
-              <option value="Twitter">Twitter</option>
-              <option value="YouTube">YouTube</option>
-              <option value="TikTok">TikTok</option>
-              <option value="LinkedIn">LinkedIn</option>
-              <option value="LINE">LINE</option>
-              <option value="KakaoTalk">KakaoTalk</option>
-              <option value="VKontakte">VKontakte</option>
-              <option value="WhatsApp">WhatsApp</option>
-              <option value="WeChat">WeChat</option>
-            </select>
-            <span class="error-msg" data-for="most_used_platform"></span>
-          </div>
-          <div class="field">
-            <label for="purpose_of_use">Primary purpose</label>
-            <select id="purpose_of_use" name="purpose_of_use" required>
-              <option value="" disabled selected hidden>Select</option>
-              <option value="Networking">Networking</option>
-              <option value="Education">Education</option>
-              <option value="Entertainment">Entertainment</option>
-              <option value="News">News</option>
-            </select>
-            <span class="error-msg" data-for="purpose_of_use"></span>
-          </div>
-          <div class="field">
-            <label for="avg_daily_usage_hours">Avg. daily screen time</label>
-            <div class="unit-input">
-              <input type="number" id="avg_daily_usage_hours" name="avg_daily_usage_hours" min="0" max="24" step="0.1" required placeholder="0.0" />
-              <span class="unit">hrs</span>
-            </div>
-            <span class="error-msg" data-for="avg_daily_usage_hours"></span>
-          </div>
-          <div class="field">
-            <label for="daily_unlocks">Daily phone unlocks</label>
-            <input type="number" id="daily_unlocks" name="daily_unlocks" min="0" step="1" required placeholder="e.g. 60" />
-            <span class="error-msg" data-for="daily_unlocks"></span>
-          </div>
-        </div>
-      </fieldset>
-
-      <fieldset class="group">
-        <legend><span class="legend-index">03</span> Lifestyle &amp; Stress</legend>
-        <div class="grid grid-3">
-          <div class="field">
-            <label for="study_hours">Study hours / day</label>
-            <div class="unit-input">
-              <input type="number" id="study_hours" name="study_hours" min="0" max="24" step="0.1" required placeholder="0.0" />
-              <span class="unit">hrs</span>
-            </div>
-            <span class="error-msg" data-for="study_hours"></span>
-          </div>
-          <div class="field">
-            <label for="physical_activity_hours">Physical activity / day</label>
-            <div class="unit-input">
-              <input type="number" id="physical_activity_hours" name="physical_activity_hours" min="0" max="24" step="0.1" required placeholder="0.0" />
-              <span class="unit">hrs</span>
-            </div>
-            <span class="error-msg" data-for="physical_activity_hours"></span>
-          </div>
-          <div class="field">
-            <label for="sleep_hours_per_night">Sleep / night</label>
-            <div class="unit-input">
-              <input type="number" id="sleep_hours_per_night" name="sleep_hours_per_night" min="0" max="24" step="0.1" required placeholder="0.0" />
-              <span class="unit">hrs</span>
-            </div>
-            <span class="error-msg" data-for="sleep_hours_per_night"></span>
-          </div>
-          <div class="field field-span">
-            <label for="stress_level">Perceived stress level</label>
-            <div class="segmented" id="stress_level_group" data-name="stress_level">
-              <button type="button" class="seg-btn" data-value="Low">Low</button>
-              <button type="button" class="seg-btn" data-value="Medium">Medium</button>
-              <button type="button" class="seg-btn" data-value="High">High</button>
-              <button type="button" class="seg-btn" data-value="Very High">Very High</button>
-            </div>
-            <input type="hidden" id="stress_level" name="stress_level" required />
-            <span class="error-msg" data-for="stress_level"></span>
-          </div>
-        </div>
-      </fieldset>
-
-      <div class="form-footer">
-        <button type="submit" class="submit-btn" id="submit-btn">
-          <span class="btn-label">Read my signal</span>
-          <span class="btn-spinner" aria-hidden="true"></span>
-        </button>
-      </div>
-    </form>
-  </section>
-
-  <!-- RESULT PANEL -->
-  <aside class="panel result-panel" aria-live="polite">
-    <div class="result-inner" id="result-inner">
-
-      <div class="state state-idle" id="state-idle">
-        <svg class="gauge gauge-idle" viewBox="0 0 240 160" aria-hidden="true">
-          <path class="gauge-track" d="M 30 140 A 100 100 0 0 1 210 140" />
-          <g class="gauge-ticks"></g>
-        </svg>
-        <p class="idle-label">Your score will appear here</p>
-        <p class="idle-copy">Fill in the form and submit to generate a predicted mental health score from 0–10.</p>
-      </div>
-
-      <div class="state state-loading" id="state-loading" hidden>
-        <div class="pulse-ring"></div>
-        <p class="loading-label">Reading the signal…</p>
-        <p class="loading-copy">Running your habits through the model.</p>
-      </div>
-
-      <div class="state state-result" id="state-result" hidden>
-        <svg class="gauge gauge-result" viewBox="0 0 240 160" aria-hidden="true">
-          <defs>
-            <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stop-color="#D9534F"/>
-              <stop offset="45%" stop-color="#E3B341"/>
-              <stop offset="100%" stop-color="#4C9A78"/>
-            </linearGradient>
-          </defs>
-          <path class="gauge-track" d="M 30 140 A 100 100 0 0 1 210 140" />
-          <path class="gauge-fill" id="gauge-fill" d="M 30 140 A 100 100 0 0 1 210 140" />
-          <g class="gauge-ticks"></g>
-          <circle class="gauge-needle-hub" cx="120" cy="140" r="5" />
-        </svg>
-        <div class="score-readout">
-          <span class="score-number" id="score-number">0.0</span>
-          <span class="score-max">/10</span>
-        </div>
-        <p class="score-band" id="score-band">—</p>
-        <p class="score-context" id="score-context"></p>
-        <button type="button" class="reset-btn" id="reset-btn">Run another read</button>
-      </div>
-
-      <div class="state state-error" id="state-error" hidden>
-        <div class="error-icon" aria-hidden="true">!</div>
-        <p class="error-copy" id="error-copy"></p>
-        <button type="button" class="reset-btn" id="error-retry-btn">Try again</button>
-      </div>
-
+<!-- ============================== DASHBOARD ============================== -->
+<section id="dashboard" class="section hero" aria-labelledby="dash-title">
+  <div class="container">
+    <p class="eyebrow" id="today-date"></p>
+    <h1 id="dash-title">Welcome to your <em>wellness space</em></h1>
+    <p class="lead">A calm place to reflect, check in, and notice patterns in your daily habits. Go at your own pace — there is nothing to win here.</p>
+    <div class="hero-actions">
+      <button type="button" class="btn btn-primary btn-lg" data-action="assess"><svg class="i"><use href="#i-clipboard"/></svg>Start Assessment</button>
+      <button type="button" class="btn btn-secondary btn-lg" data-action="mood"><svg class="i"><use href="#i-smile"/></svg>Check In Today</button>
     </div>
-  </aside>
+
+    <div class="stat-grid" aria-label="Summary">
+      <article class="card stat">
+        <header class="stat-head"><svg class="i"><use href="#i-chart"/></svg><h2>Latest score</h2></header>
+        <div class="stat-body" id="stat-latest-body"></div>
+      </article>
+      <article class="card stat">
+        <header class="stat-head"><svg class="i"><use href="#i-rotate"/></svg><h2>Previous score</h2></header>
+        <div class="stat-body" id="stat-prev-body"></div>
+      </article>
+      <article class="card stat">
+        <header class="stat-head"><svg class="i"><use href="#i-smile"/></svg><h2>Today's mood</h2></header>
+        <div class="stat-body" id="stat-mood-body"></div>
+      </article>
+      <article class="card stat">
+        <header class="stat-head"><svg class="i"><use href="#i-flame"/></svg><h2>Check-in streak</h2></header>
+        <div class="stat-body" id="stat-streak-body"></div>
+      </article>
+      <article class="card stat">
+        <header class="stat-head"><svg class="i"><use href="#i-leaf"/></svg><h2>Self-care sessions</h2></header>
+        <div class="stat-body" id="stat-act-body"></div>
+      </article>
+    </div>
+
+    <div class="dash-grid">
+      <article class="card">
+        <h2 class="card-title">Quick actions</h2>
+        <div class="quick-grid">
+          <button type="button" class="quick" data-action="assess"><svg class="i"><use href="#i-clipboard"/></svg><span>Take an assessment</span></button>
+          <button type="button" class="quick" data-action="mood"><svg class="i"><use href="#i-smile"/></svg><span>Record today's mood</span></button>
+          <button type="button" class="quick" data-action="progress"><svg class="i"><use href="#i-chart"/></svg><span>View progress</span></button>
+          <button type="button" class="quick" data-action="breathe"><svg class="i"><use href="#i-wind"/></svg><span>Breathing exercise</span></button>
+          <button type="button" class="quick" data-action="report"><svg class="i"><use href="#i-download"/></svg><span>Download report</span></button>
+        </div>
+      </article>
+      <article class="card">
+        <h2 class="card-title">Gentle suggestions</h2>
+        <p class="muted small">General wellness suggestions based on your own entries. Not medical advice.</p>
+        <ul class="reco-list" id="reco-list"></ul>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== ASSESSMENT ============================== -->
+<section id="assessment" class="section" aria-labelledby="assess-title">
+  <div class="container">
+    <header class="section-head">
+      <p class="eyebrow">ML Assessment</p>
+      <h2 id="assess-title" class="section-title">A quick read on your daily rhythm</h2>
+      <p class="lead">Your habits, screen time and stress go into a machine-learning model that returns a predicted score. It is an estimate based on patterns in data — not a diagnosis.</p>
+    </header>
+
+    <div class="assess-grid">
+      <section class="card form-card" aria-labelledby="form-heading">
+        <h3 id="form-heading" class="sr-only">Assessment form</h3>
+        <div class="form-progress" aria-hidden="false">
+          <div class="form-progress-top"><span id="form-progress-text">0 of 12 answered</span></div>
+          <div class="progress" role="progressbar" aria-label="Form completion" aria-valuemin="0" aria-valuemax="12" aria-valuenow="0" id="form-progress-bar"><span id="form-progress-fill"></span></div>
+        </div>
+
+        <form id="predict-form" novalidate>
+          <fieldset class="group">
+            <legend><span class="legend-index">01</span> Profile</legend>
+            <div class="grid grid-3">
+              <div class="field">
+                <label for="age">Age</label>
+                <input type="number" id="age" name="age" min="10" max="100" step="1" required placeholder="e.g. 21" inputmode="numeric" />
+                <span class="hint">10–100</span>
+                <span class="error-msg" data-for="age" role="alert"></span>
+              </div>
+              <div class="field">
+                <label for="gender">Gender</label>
+                <select id="gender" name="gender" required>
+                  <option value="" disabled selected hidden>Select</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                </select>
+                <span class="error-msg" data-for="gender" role="alert"></span>
+              </div>
+              <div class="field">
+                <label for="country">Country</label>
+                <input type="text" id="country" name="country" list="country-list" required placeholder="e.g. India" autocomplete="off" />
+                <datalist id="country-list">
+                  <option value="India"></option><option value="USA"></option><option value="Canada"></option>
+                  <option value="Australia"></option><option value="UK"></option><option value="Germany"></option>
+                  <option value="Mexico"></option><option value="Turkey"></option><option value="France"></option>
+                </datalist>
+                <span class="hint">Not listed? Type it anyway.</span>
+                <span class="error-msg" data-for="country" role="alert"></span>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="group">
+            <legend><span class="legend-index">02</span> Academic &amp; digital habits</legend>
+            <div class="grid grid-2">
+              <div class="field">
+                <label for="academic_level">Academic level</label>
+                <select id="academic_level" name="academic_level" required>
+                  <option value="" disabled selected hidden>Select</option>
+                  <option value="High School">High School</option>
+                  <option value="Undergraduate">Undergraduate</option>
+                  <option value="Graduate">Graduate</option>
+                </select>
+                <span class="error-msg" data-for="academic_level" role="alert"></span>
+              </div>
+              <div class="field">
+                <label for="most_used_platform">Most-used platform</label>
+                <select id="most_used_platform" name="most_used_platform" required>
+                  <option value="" disabled selected hidden>Select</option>
+                  <option value="Facebook">Facebook</option>
+                  <option value="Instagram">Instagram</option>
+                  <option value="Snapchat">Snapchat</option>
+                  <option value="Twitter">Twitter</option>
+                  <option value="YouTube">YouTube</option>
+                  <option value="TikTok">TikTok</option>
+                  <option value="LinkedIn">LinkedIn</option>
+                  <option value="LINE">LINE</option>
+                  <option value="KakaoTalk">KakaoTalk</option>
+                  <option value="VKontakte">VKontakte</option>
+                  <option value="WhatsApp">WhatsApp</option>
+                  <option value="WeChat">WeChat</option>
+                </select>
+                <span class="error-msg" data-for="most_used_platform" role="alert"></span>
+              </div>
+              <div class="field">
+                <label for="purpose_of_use">Primary purpose</label>
+                <select id="purpose_of_use" name="purpose_of_use" required>
+                  <option value="" disabled selected hidden>Select</option>
+                  <option value="Networking">Networking</option>
+                  <option value="Education">Education</option>
+                  <option value="Entertainment">Entertainment</option>
+                  <option value="News">News</option>
+                </select>
+                <span class="error-msg" data-for="purpose_of_use" role="alert"></span>
+              </div>
+              <div class="field">
+                <label for="avg_daily_usage_hours">Avg. daily screen time</label>
+                <div class="unit-input">
+                  <input type="number" id="avg_daily_usage_hours" name="avg_daily_usage_hours" min="0" max="24" step="0.1" required placeholder="0.0" inputmode="decimal" />
+                  <span class="unit">hrs</span>
+                </div>
+                <span class="error-msg" data-for="avg_daily_usage_hours" role="alert"></span>
+              </div>
+              <div class="field">
+                <label for="daily_unlocks">Daily phone unlocks</label>
+                <input type="number" id="daily_unlocks" name="daily_unlocks" min="0" step="1" required placeholder="e.g. 60" inputmode="numeric" />
+                <span class="error-msg" data-for="daily_unlocks" role="alert"></span>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="group">
+            <legend><span class="legend-index">03</span> Lifestyle &amp; stress</legend>
+            <div class="grid grid-3">
+              <div class="field">
+                <label for="study_hours">Study hours / day</label>
+                <div class="unit-input">
+                  <input type="number" id="study_hours" name="study_hours" min="0" max="24" step="0.1" required placeholder="0.0" inputmode="decimal" />
+                  <span class="unit">hrs</span>
+                </div>
+                <span class="error-msg" data-for="study_hours" role="alert"></span>
+              </div>
+              <div class="field">
+                <label for="physical_activity_hours">Physical activity / day</label>
+                <div class="unit-input">
+                  <input type="number" id="physical_activity_hours" name="physical_activity_hours" min="0" max="24" step="0.1" required placeholder="0.0" inputmode="decimal" />
+                  <span class="unit">hrs</span>
+                </div>
+                <span class="error-msg" data-for="physical_activity_hours" role="alert"></span>
+              </div>
+              <div class="field">
+                <label for="sleep_hours_per_night">Sleep / night</label>
+                <div class="unit-input">
+                  <input type="number" id="sleep_hours_per_night" name="sleep_hours_per_night" min="0" max="24" step="0.1" required placeholder="0.0" inputmode="decimal" />
+                  <span class="unit">hrs</span>
+                </div>
+                <span class="error-msg" data-for="sleep_hours_per_night" role="alert"></span>
+              </div>
+              <div class="field field-span">
+                <span class="label" id="stress-label">Perceived stress level</span>
+                <div class="segmented" id="stress_level_group" data-name="stress_level" role="radiogroup" aria-labelledby="stress-label">
+                  <button type="button" class="seg-btn" role="radio" aria-checked="false" data-value="Low">Low</button>
+                  <button type="button" class="seg-btn" role="radio" aria-checked="false" data-value="Medium">Medium</button>
+                  <button type="button" class="seg-btn" role="radio" aria-checked="false" data-value="High">High</button>
+                  <button type="button" class="seg-btn" role="radio" aria-checked="false" data-value="Very High">Very High</button>
+                </div>
+                <input type="hidden" id="stress_level" name="stress_level" required />
+                <span class="error-msg" data-for="stress_level" role="alert"></span>
+              </div>
+            </div>
+          </fieldset>
+
+          <div class="form-footer">
+            <p class="muted small footer-note"><svg class="i"><use href="#i-lock"/></svg> Answers are sent to the prediction service to compute your score. Your history stays in this browser.</p>
+            <button type="submit" class="btn btn-primary" id="submit-btn">
+              <span class="btn-label">Read my signal</span>
+              <span class="btn-spinner" aria-hidden="true"></span>
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <aside class="card result-panel" id="result-panel" aria-labelledby="result-heading">
+        <h3 id="result-heading" class="sr-only">Prediction result</h3>
+        <p class="sr-only" id="score-sr" role="status" aria-live="polite"></p>
+        <div class="result-inner" id="result-inner">
+
+          <div class="state state-idle" id="state-idle">
+            <svg class="gauge gauge-idle" viewBox="0 0 240 160" aria-hidden="true">
+              <path class="gauge-track" d="M 30 140 A 100 100 0 0 1 210 140" />
+              <g class="gauge-ticks"></g>
+            </svg>
+            <p class="idle-label">Your score will appear here</p>
+            <p class="idle-copy">Fill in the form and submit to generate a predicted score on a 0–10 scale.</p>
+          </div>
+
+          <div class="state state-loading" id="state-loading" hidden>
+            <div class="pulse-ring"></div>
+            <p class="loading-label">Reading the signal…</p>
+            <p class="loading-copy" id="loading-copy">Running your habits through the model.</p>
+          </div>
+
+          <div class="state state-result" id="state-result" hidden>
+            <svg class="gauge gauge-result" id="gauge-result" viewBox="0 0 240 160" role="img" aria-label="Score gauge">
+              <defs>
+                <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="var(--accent-2)"/>
+                  <stop offset="100%" stop-color="var(--accent)"/>
+                </linearGradient>
+              </defs>
+              <path class="gauge-track" d="M 30 140 A 100 100 0 0 1 210 140" />
+              <path class="gauge-fill" id="gauge-fill" d="M 30 140 A 100 100 0 0 1 210 140" />
+              <g class="gauge-ticks"></g>
+              <text class="gauge-end" x="30" y="158" text-anchor="middle">0</text>
+              <text class="gauge-end" x="210" y="158" text-anchor="middle">10</text>
+            </svg>
+            <div class="score-readout" aria-hidden="true">
+              <span class="score-number" id="score-number">0.00</span>
+              <span class="score-max">/10</span>
+            </div>
+            <p class="score-band" id="score-band">—</p>
+            <p class="score-context" id="score-context"></p>
+            <p class="score-compare" id="score-compare"></p>
+            <p class="score-disclaimer"><svg class="i"><use href="#i-info"/></svg> A model estimate, not a diagnosis. Please don't rely on a single number.</p>
+            <div class="result-actions">
+              <button type="button" class="btn btn-ghost btn-sm" id="reset-btn"><svg class="i"><use href="#i-rotate"/></svg>Retake</button>
+              <button type="button" class="btn btn-ghost btn-sm" data-action="progress"><svg class="i"><use href="#i-chart"/></svg>Progress</button>
+              <button type="button" class="btn btn-ghost btn-sm" data-action="report"><svg class="i"><use href="#i-download"/></svg>Report</button>
+            </div>
+          </div>
+
+          <div class="state state-error" id="state-error" hidden>
+            <div class="error-icon" aria-hidden="true">!</div>
+            <p class="error-label" id="error-label">Something went wrong</p>
+            <p class="error-copy" id="error-copy"></p>
+            <button type="button" class="btn btn-ghost btn-sm" id="error-retry-btn">Try again</button>
+          </div>
+
+        </div>
+      </aside>
+    </div>
+
+    <article class="card result-extra" id="result-extra" hidden>
+      <h3 class="card-title">Suggestions based on your answers</h3>
+      <p class="muted small">These come from simple, transparent rules applied to what you entered — they are <strong>not</strong> model explanations, and they don't predict a change in your score. General wellness suggestions, not medical advice.</p>
+      <ul class="reco-list" id="result-reco"></ul>
+    </article>
+  </div>
+</section>
+
+<!-- ============================== INSIGHTS ============================== -->
+<section id="insights" class="section" aria-labelledby="insights-title">
+  <div class="container">
+    <header class="section-head split">
+      <div>
+        <p class="eyebrow">Insights</p>
+        <h2 id="insights-title" class="section-title">Progress over time</h2>
+        <p class="lead">Built only from entries saved in this browser. Predicted scores and self-reported moods are shown separately on purpose.</p>
+      </div>
+      <div class="segmented seg-inline" id="range-group" role="group" aria-label="Time range">
+        <button type="button" class="seg-btn" data-range="7" aria-pressed="false">7 days</button>
+        <button type="button" class="seg-btn active" data-range="30" aria-pressed="true">30 days</button>
+        <button type="button" class="seg-btn" data-range="all" aria-pressed="false">All time</button>
+      </div>
+    </header>
+
+    <div class="chart-grid">
+      <article class="card chart-card">
+        <h3 class="card-title">Predicted score history</h3>
+        <p class="muted small">Model output, 0–10 scale.</p>
+        <div class="chart-wrap"><canvas id="chart-scores" role="img" aria-label="Line chart of predicted scores over time"></canvas></div>
+        <p class="chart-empty empty" hidden></p>
+      </article>
+      <article class="card chart-card">
+        <h3 class="card-title">Mood trend</h3>
+        <p class="muted small">Your own check-ins. Days without an entry are skipped.</p>
+        <div class="chart-wrap"><canvas id="chart-mood" role="img" aria-label="Line chart of self-reported mood over time"></canvas></div>
+        <p class="chart-empty empty" hidden></p>
+      </article>
+      <article class="card chart-card">
+        <h3 class="card-title">Mood distribution</h3>
+        <p class="muted small">How many check-ins at each mood level.</p>
+        <div class="chart-wrap"><canvas id="chart-dist" role="img" aria-label="Bar chart of mood entries by level"></canvas></div>
+        <p class="chart-empty empty" hidden></p>
+      </article>
+      <article class="card chart-card">
+        <h3 class="card-title" id="consistency-title">Consistency</h3>
+        <p class="muted small" id="consistency-sub">Check-ins and assessments per week.</p>
+        <div class="chart-wrap"><canvas id="chart-consistency" role="img" aria-label="Bar chart of check-ins and assessments over time"></canvas></div>
+        <p class="chart-empty empty" hidden></p>
+      </article>
+      <article class="card chart-card chart-wide">
+        <div class="card-title-row">
+          <h3 class="card-title">Inputs vs. predicted score</h3>
+          <label class="inline-select"><span class="sr-only">Input to compare</span>
+            <select id="corr-x">
+              <option value="sleep_hours_per_night">Sleep / night</option>
+              <option value="study_hours">Study hours</option>
+              <option value="avg_daily_usage_hours">Screen time</option>
+              <option value="physical_activity_hours">Physical activity</option>
+              <option value="daily_unlocks">Phone unlocks</option>
+              <option value="age">Age</option>
+            </select>
+          </label>
+        </div>
+        <p class="muted small" id="corr-note">Needs at least 5 assessments.</p>
+        <div class="chart-wrap"><canvas id="chart-corr" role="img" aria-label="Scatter plot of an assessment input against predicted score"></canvas></div>
+        <p class="chart-empty empty" hidden></p>
+      </article>
+    </div>
+
+    <div class="milestones">
+      <header class="section-head tight">
+        <h3 class="card-title">Milestones</h3>
+        <p class="muted">Gentle markers of showing up for yourself. Breaks are normal — earned badges and your longest streak always stay.</p>
+      </header>
+      <article class="card streak-card">
+        <div class="streak-main">
+          <svg class="i i-xl"><use href="#i-flame"/></svg>
+          <div>
+            <p class="streak-num"><span id="streak-current">0</span> <span class="streak-unit">day streak</span></p>
+            <p class="muted small" id="streak-sub"></p>
+          </div>
+        </div>
+        <div class="streak-next">
+          <div class="streak-next-top"><span id="streak-next-label">Next milestone</span><span id="streak-next-val"></span></div>
+          <div class="progress" role="progressbar" aria-labelledby="streak-next-label" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="streak-bar"><span id="streak-fill"></span></div>
+        </div>
+      </article>
+      <div class="badge-grid" id="badge-grid"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== MOOD ============================== -->
+<section id="mood" class="section" aria-labelledby="mood-title">
+  <div class="container">
+    <header class="section-head">
+      <p class="eyebrow">Mood Tracker</p>
+      <h2 id="mood-title" class="section-title">How are you, really?</h2>
+      <p class="lead">One check-in per day. Add a few words if you like. Entries stay in this browser unless you export them.</p>
+    </header>
+
+    <div class="mood-grid">
+      <article class="card mood-card">
+        <div class="card-title-row">
+          <h3 class="card-title" id="mood-form-title">Today</h3>
+          <span class="badge-pill" id="mood-mode" hidden>Editing</span>
+        </div>
+        <p class="muted" id="mood-date-label"></p>
+
+        <form id="mood-form" novalidate>
+          <fieldset class="mood-picker">
+            <legend class="sr-only">Select your mood</legend>
+            <div class="mood-options" id="mood-options"></div>
+          </fieldset>
+          <span class="error-msg shown" id="mood-error" role="alert" hidden>Please choose a mood first.</span>
+
+          <div class="field">
+            <label for="mood-note">Journal <span class="muted">(optional)</span></label>
+            <textarea id="mood-note" rows="5" maxlength="500" placeholder="What's on your mind today?"></textarea>
+            <span class="hint"><span id="mood-count">0</span>/500 · Stored only in this browser, unencrypted.</span>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="mood-save"><svg class="i"><use href="#i-check"/></svg><span>Save check-in</span></button>
+            <button type="button" class="btn btn-ghost danger" id="mood-delete" hidden><svg class="i"><use href="#i-trash"/></svg>Delete</button>
+          </div>
+        </form>
+      </article>
+
+      <article class="card cal-card">
+        <div class="cal-head">
+          <button type="button" class="btn-icon" id="cal-prev" aria-label="Previous month"><svg class="i"><use href="#i-chev-l"/></svg></button>
+          <h3 class="card-title" id="cal-title" aria-live="polite"></h3>
+          <button type="button" class="btn-icon" id="cal-next" aria-label="Next month"><svg class="i"><use href="#i-chev-r"/></svg></button>
+        </div>
+        <div class="cal-week" aria-hidden="true"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+        <div class="cal-grid" id="cal-grid" role="group" aria-labelledby="cal-title"></div>
+        <h4 class="mini-title">Recent entries</h4>
+        <ul class="mood-list" id="mood-list"></ul>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== WELLNESS ZONE ============================== -->
+<section id="wellness" class="section" aria-labelledby="well-title">
+  <div class="container">
+    <header class="section-head">
+      <p class="eyebrow">Wellness Zone</p>
+      <h2 id="well-title" class="section-title">Small pauses, on your terms</h2>
+      <p class="lead">Simple self-care exercises. Stop any time — if something feels uncomfortable, that's a good reason to pause.</p>
+    </header>
+
+    <div class="well-grid">
+      <article class="card breath-card" id="breathing-card" aria-labelledby="breath-title">
+        <div class="breath-layout">
+          <div class="breath-stage" id="breath-stage">
+            <div class="breath-ring">
+              <div class="breath-circle" id="breath-circle"></div>
+              <div class="breath-center">
+                <span class="breath-label" id="breath-label">Ready</span>
+                <span class="breath-count" id="breath-count" aria-hidden="true">—</span>
+              </div>
+            </div>
+          </div>
+          <div class="breath-controls">
+            <h3 class="card-title" id="breath-title">Guided breathing</h3>
+            <p class="muted">Breathe in as the circle grows, out as it shrinks. Breathe at a comfortable, natural depth.</p>
+            <div class="grid grid-2">
+              <div class="field">
+                <label for="breath-pattern">Pattern</label>
+                <select id="breath-pattern">
+                  <option value="box">Box · 4 in, 4 hold, 4 out, 4 hold</option>
+                  <option value="gentle">Gentle · 4 in, 6 out</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="breath-duration">Duration</label>
+                <select id="breath-duration">
+                  <option value="1">1 minute</option>
+                  <option value="2" selected>2 minutes</option>
+                  <option value="3">3 minutes</option>
+                  <option value="5">5 minutes</option>
+                  <option value="10">10 minutes</option>
+                </select>
+              </div>
+            </div>
+            <p class="breath-remaining">Time left: <strong id="breath-remaining">2:00</strong></p>
+            <div class="form-actions">
+              <button type="button" class="btn btn-primary" id="breath-start"><svg class="i"><use href="#i-play"/></svg>Start</button>
+              <button type="button" class="btn btn-secondary" id="breath-pause" hidden><svg class="i"><use href="#i-pause"/></svg>Pause</button>
+              <button type="button" class="btn btn-primary" id="breath-resume" hidden><svg class="i"><use href="#i-play"/></svg>Resume</button>
+              <button type="button" class="btn btn-ghost" id="breath-stop" hidden><svg class="i"><use href="#i-stop"/></svg>Stop</button>
+            </div>
+            <p class="sr-only" id="breath-status" role="status" aria-live="polite"></p>
+            <div class="summary-box" id="breath-summary" hidden></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card" id="grounding-card" aria-labelledby="ground-title">
+        <h3 class="card-title" id="ground-title">5-4-3-2-1 grounding</h3>
+        <p class="muted small">A way to gently bring attention back to the present, using your senses.</p>
+        <div class="ground-body" id="ground-body">
+          <p class="ground-step-label" id="ground-step-label"></p>
+          <p class="ground-number" id="ground-number" aria-hidden="true"></p>
+          <p class="ground-prompt" id="ground-prompt"></p>
+          <p class="muted small" id="ground-hint"></p>
+        </div>
+        <ol class="dots" id="ground-dots" aria-label="Progress"></ol>
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" id="ground-prev"><svg class="i"><use href="#i-chev-l"/></svg>Previous</button>
+          <button type="button" class="btn btn-primary" id="ground-next"><span>Next</span><svg class="i"><use href="#i-chev-r"/></svg></button>
+        </div>
+      </article>
+
+      <article class="card" id="timer-card" aria-labelledby="timer-title">
+        <h3 class="card-title" id="timer-title">Mindfulness timer</h3>
+        <p class="muted small">Sit quietly for as long as feels right. No sound unless you turn it on.</p>
+        <p class="timer-display" id="timer-display" role="timer" aria-live="off">5:00</p>
+        <div class="progress" role="progressbar" aria-label="Timer progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="timer-bar"><span id="timer-fill"></span></div>
+        <div class="chips" role="group" aria-label="Quick durations">
+          <button type="button" class="chip" data-min="3">3 min</button>
+          <button type="button" class="chip active" data-min="5">5 min</button>
+          <button type="button" class="chip" data-min="10">10 min</button>
+          <button type="button" class="chip" data-min="15">15 min</button>
+        </div>
+        <div class="field">
+          <label for="timer-minutes">Custom minutes</label>
+          <input type="number" id="timer-minutes" min="1" max="120" step="1" value="5" inputmode="numeric" />
+        </div>
+        <label class="check"><input type="checkbox" id="timer-chime" /> <span>Play a soft chime when finished</span></label>
+        <div class="form-actions">
+          <button type="button" class="btn btn-primary" id="timer-start"><svg class="i"><use href="#i-play"/></svg><span>Start</span></button>
+          <button type="button" class="btn btn-ghost" id="timer-reset"><svg class="i"><use href="#i-rotate"/></svg>Reset</button>
+        </div>
+        <p class="sr-only" id="timer-status" role="status" aria-live="polite"></p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== ABOUT ============================== -->
+<section id="about" class="section" aria-labelledby="about-title">
+  <div class="container">
+    <header class="section-head">
+      <p class="eyebrow">About</p>
+      <h2 id="about-title" class="section-title">About Mansik Santulan Score</h2>
+    </header>
+
+    <div class="about-grid">
+      <article class="card">
+        <h3 class="card-title">What this is</h3>
+        <p>Mansik Santulan Score – ML Engine is a student wellness project. You enter 12 pieces of information about your profile, digital habits, lifestyle and perceived stress, and a hosted machine-learning service returns a numeric <code>predicted_mental_health_score</code>, displayed here on a 0–10 scale.</p>
+        <p>Everything else on this page — mood tracking, charts, badges, exercises and suggestions — runs in your browser using simple, transparent logic.</p>
+      </article>
+      <article class="card">
+        <h3 class="card-title">Intended use</h3>
+        <p>Self-reflection and demonstration of a machine-learning workflow. It is meant to prompt curiosity about habits, not to evaluate anyone.</p>
+        <h3 class="card-title spaced">Not a diagnosis</h3>
+        <p>The score is a statistical estimate. It cannot diagnose, detect or rule out any mental-health condition, and it should never replace talking with a qualified professional. If you are struggling, please reach out to someone you trust or a mental-health professional, or contact local emergency services if you are in danger.</p>
+      </article>
+      <article class="card">
+        <h3 class="card-title">Known limitations</h3>
+        <ul class="plain-list">
+          <li>The score depends entirely on the 12 answers entered; self-reported values can be inaccurate.</li>
+          <li>Any single score is a snapshot. Differences between two runs are not necessarily meaningful.</li>
+          <li>Suggestions are rule-of-thumb, general wellness ideas, not model explanations and not medical advice.</li>
+          <li>History, mood entries and journal text are saved in this browser's local storage — specific to this device and browser, not encrypted, and lost if you clear site data.</li>
+        </ul>
+      </article>
+      <article class="card todo-card">
+        <h3 class="card-title">Model details <span class="badge-pill">For the developer to complete</span></h3>
+        <p class="muted small">These details aren't in the project files, so they're left blank rather than guessed.</p>
+        <dl class="todo-list">
+          <div><dt>Model type / architecture</dt><dd>TODO — add verified details</dd></div>
+          <div><dt>Training dataset &amp; source</dt><dd>TODO — add verified details</dd></div>
+          <div><dt>Evaluation metrics</dt><dd>TODO — add verified details</dd></div>
+          <div><dt>Score scale &amp; direction (what higher/lower means)</dt><dd>TODO — confirm with model documentation</dd></div>
+        </dl>
+      </article>
+    </div>
+  </div>
+</section>
 
 </main>
 
 <footer class="site-footer">
-  <p>Built for informational purposes only — this is not a clinical assessment. If you're struggling, please talk to someone you trust.</p>
+  <div class="container">
+    <p>Built for informational purposes only — this is not a clinical assessment. If you're struggling, please talk to someone you trust or a qualified professional.</p>
+  </div>
 </footer>
 
-<script src="script.js"></script>
+<!-- ============================== DIALOGS ============================== -->
+<dialog id="settings-dialog" aria-labelledby="settings-title">
+  <form method="dialog" class="dialog-body">
+    <header class="dialog-head">
+      <h2 id="settings-title">Settings &amp; privacy</h2>
+      <button class="btn-icon" value="close" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button>
+    </header>
+    <p><strong>Where your data lives.</strong> Assessment history, mood check-ins, journal text, badges and session counts are saved in this browser's <em>localStorage</em>. It is specific to this device and browser, it is <strong>not encrypted</strong>, and anyone with access to this browser profile could read it. It is not equivalent to secure server-side storage.</p>
+    <p><strong>What leaves your device.</strong> Only the 12 assessment answers are sent to the prediction service when you submit the assessment form. Journal entries are never sent anywhere.</p>
+    <p class="muted small" id="storage-warning" hidden>Browser storage appears to be unavailable, so nothing will be saved between visits.</p>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-secondary" id="export-data"><svg class="i"><use href="#i-download"/></svg>Export my data (JSON)</button>
+      <button type="button" class="btn btn-ghost danger" id="clear-data"><svg class="i"><use href="#i-trash"/></svg>Clear my local data</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="report-dialog" aria-labelledby="report-title">
+  <form method="dialog" class="dialog-body" id="report-form">
+    <header class="dialog-head">
+      <h2 id="report-title">Download wellness report</h2>
+      <button class="btn-icon" value="close" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button>
+    </header>
+    <p class="muted">A PDF built from the data saved in this browser: your scores, a progress summary, general suggestions and limitations.</p>
+    <label class="check"><input type="checkbox" id="rep-mood" checked /> <span>Include mood summary (levels and dates only)</span></label>
+    <label class="check"><input type="checkbox" id="rep-journal" /> <span>Include my private journal text</span></label>
+    <p class="muted small">Journal text is excluded by default. If you include it, anyone who receives the PDF can read it.</p>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-primary" id="rep-generate"><svg class="i"><use href="#i-download"/></svg>Generate PDF</button>
+      <button type="submit" class="btn btn-ghost" value="cancel">Cancel</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="confirm-dialog" aria-labelledby="confirm-title" aria-describedby="confirm-text">
+  <form method="dialog" class="dialog-body">
+    <h2 id="confirm-title">Are you sure?</h2>
+    <p id="confirm-text"></p>
+    <div class="dialog-actions">
+      <button type="submit" class="btn btn-ghost" value="cancel">Cancel</button>
+      <button type="submit" class="btn btn-danger" value="ok" id="confirm-ok">Confirm</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
+<div class="confetti" id="confetti" aria-hidden="true"></div>
+
 </body>
 </html>
